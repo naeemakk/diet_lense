@@ -7,3 +7,4 @@ class IsOwner(BasePermission):
         if isinstance(obj,CustomUser):
             return request.user==obj
         return request.user==obj.owner
+    

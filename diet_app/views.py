@@ -2,11 +2,15 @@ from django.shortcuts import render
 from diet_app.models import *
 from diet_app.serializers import *
 from rest_framework.generics import CreateAPIView, RetrieveAPIView,UpdateAPIView,ListAPIView,DestroyAPIView
+from rest_framework.views import APIView
 from django.contrib.auth import backends
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from diet_app.utility_fns import calculate_bmr
 from diet_app.permissions import IsOwner 
+from django.utils import timezone
+from rest_framework.response import Response
+from django.db.models import Sum
 
 # Create your views here.
 class SignupView(CreateAPIView):
@@ -61,5 +65,21 @@ class FoodLogRetrieveUpdateDestroyView(RetrieveAPIView,UpdateAPIView,DestroyAPIV
     serializer_class=FoodLogSerializer
     queryset=FoodLog.objects.all()
 
-   
+class DietSummeryView(APIView):
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsOwner]
+    def get(self,request,*args,**kwargs):
+        cur_date=timezone.now()
+        queryset=FoodLog.objects.filter(created_at__date=cur_date,owner=request.user)
+        calories_consumed=queryset.values("calories").aggregate(Sum('calories'))
+        print(calories_consumed)
+        print(request.user.profile.bmr)
+        context={
+            "total_calories_consumed": calories_consumed.get('calories__sum'),
+            "daily_target":request.user.profile.bmr,
+            "balance": request.user.profile.bmr-calories_consumed.get('calories__sum')
+        }
+        return Response(context)
+    
+ 
     
